@@ -26,18 +26,21 @@ def main():
 
 
 class MessageSearchResult:
-    def __init__(self, message_id, message_text, similarity):
-        self.message_id = message_id
+    def __init__(self, message_id, message_text, similarity, message_link):
         self.message_text = message_text
+        self.message_id = message_id
         self.similarity = similarity
+        self.message_link = message_link
 
 
 class TelegramSearchModel:
     def __init__(self, chat_name, language):
         chat_filename = get_chat_filename(chat_name)
+        chat_id_filename = get_chat_id_filename(chat_name)
         model_filename = get_model_filename(chat_name)
 
-        download_chat(chat_name, chat_filename)
+        download_chat(chat_name, chat_filename, chat_id_filename)
+        self.chat_id = read_chat_id(chat_id_filename)
         chat_messages = list(read_chat_messages(chat_filename))
         self.chat_message_by_id = {message_id: message_text for message_id, message_text in chat_messages}
 
@@ -59,10 +62,11 @@ class TelegramSearchModel:
             chat_message_tokens = preprocess_message_text(chat_message, self.stemmer)
             if len(chat_message_tokens) < 4:
                 continue
-            if len(query_tokens_set.intersection(chat_message_tokens)) == len(query_tokens_set):
-                continue
+            #if len(query_tokens_set.intersection(chat_message_tokens)) == len(query_tokens_set):
+            #    continue
 
-            results.append(MessageSearchResult(message_id, chat_message, similarity))
+            message_link = f"https://t.me/c/{str(self.chat_id)[4:]}/{message_id}"
+            results.append(MessageSearchResult(message_id, chat_message, similarity, message_link))
             if len(results) >= 5:
                 break
         return results
@@ -74,23 +78,31 @@ def get_chat_filename(chat_name):
     return f'{out_directory}/{chat_name}.csv'
 
 
+def get_chat_id_filename(chat_name):
+    out_directory = 'messages'
+    os.makedirs(out_directory, exist_ok=True)
+    return f'{out_directory}/{chat_name}.id.txt'
+
+
 def get_model_filename(chat_name):
     out_directory = 'models'
     os.makedirs(out_directory, exist_ok=True)
     return f'{out_directory}/{chat_name}.bin'
 
 
-def download_chat(chat_name, chat_filename):
-    if os.path.exists(chat_filename):
+def download_chat(chat_name, chat_filename, chat_id_filename):
+    if os.path.exists(chat_filename) and os.path.exists(chat_id_filename):
         print('Already downloaded.')
         return
 
     with create_user_client() as client:
-        client.loop.run_until_complete(async_download_chat(client, chat_name, chat_filename))
+        client.loop.run_until_complete(async_download_chat(client, chat_name, chat_filename, chat_id_filename))
 
 
-async def async_download_chat(client, chat_name, chat_filename):
+async def async_download_chat(client, chat_name, chat_filename, chat_id_filename):
     chat_id = await get_chat_id(client, chat_name)
+    with open(chat_id_filename, 'w') as f:
+        f.write(str(chat_id))
     print(f'Chat "{chat_name}" found, id={chat_id}.')
 
     with open(chat_filename, 'w', encoding='utf-8', newline='') as f:
@@ -129,6 +141,11 @@ def train_model(chat_messages, stemmer, model_filename):
     model.train(train_corpus, total_examples=model.corpus_count, epochs=model.epochs)
     model.save(model_filename)
     print(f'The trained model has been written to {model_filename}')
+
+
+def read_chat_id(chat_id_filename):
+    with open(chat_id_filename) as f:
+        return int(f.readline().strip())
 
 
 def read_chat_messages(chat_filename):
