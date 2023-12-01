@@ -21,14 +21,16 @@ def main():
         @bot.on(events.NewMessage(pattern=r"\/search"))
         async def handler(event):
             message = event.message.message
-            search_query = message[len("/search "):]
+            search_query = message.split(maxsplit=1)[1].strip()
+            if not search_query:
+                return
 
             response = ""
             for result in model.query(search_query):
                 message_text = result.message_text
-                message_text = message_text.replace("[", "\[")
-                message_text = message_text.replace("]", "\]")
-                response += f"[{message_text}]({result.message_link})\n"
+                message_text = message_text.replace('[', '\\[')
+                message_text = message_text.replace(']', '\\]')
+                response += f'[{message_text}]({result.message_link})\n'
 
             await event.reply(response)
         bot.run_until_disconnected()

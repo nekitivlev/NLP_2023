@@ -51,7 +51,6 @@ class TelegramSearchModel:
 
     def query(self, query):
         query_tokens = preprocess_message_text(query, self.stemmer)
-        query_tokens_set = set(query_tokens)
         query_vector = self.model.infer_vector(query_tokens)
 
         results = []
@@ -62,8 +61,6 @@ class TelegramSearchModel:
             chat_message_tokens = preprocess_message_text(chat_message, self.stemmer)
             if len(chat_message_tokens) < 4:
                 continue
-            #if len(query_tokens_set.intersection(chat_message_tokens)) == len(query_tokens_set):
-            #    continue
 
             message_link = f"https://t.me/c/{str(self.chat_id)[4:]}/{message_id}"
             results.append(MessageSearchResult(message_id, chat_message, similarity, message_link))
