@@ -21,11 +21,11 @@ def main():
     with bot:
         @bot.on(events.NewMessage(pattern=r"\/search"))
         async def handler(event):
-            message = event.message.message
             if allowed_chats and event.chat_id not in allowed_chats:
                 return
 
-            search_query = message.split(maxsplit=1)[1].strip()
+            message = event.message.message
+            search_query = get_query_from_message(message)
             if not search_query:
                 return
 
@@ -38,6 +38,14 @@ def main():
 
             await event.reply(response)
         bot.run_until_disconnected()
+
+
+def get_query_from_message(message):
+    command_and_query = message.split(maxsplit=1)
+    if len(command_and_query) < 2:
+        return
+    search_query = command_and_query[1].strip()
+    return search_query
 
 
 def get_allowed_chats():
