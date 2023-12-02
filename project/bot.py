@@ -16,11 +16,15 @@ def main():
 
     bot = create_bot_client()
     model = TelegramSearchModel(chat_name, language)
+    allowed_chats = get_allowed_chats()
 
     with bot:
         @bot.on(events.NewMessage(pattern=r"\/search"))
         async def handler(event):
             message = event.message.message
+            if allowed_chats and event.chat_id not in allowed_chats:
+                return
+
             search_query = message.split(maxsplit=1)[1].strip()
             if not search_query:
                 return
@@ -34,6 +38,11 @@ def main():
 
             await event.reply(response)
         bot.run_until_disconnected()
+
+
+def get_allowed_chats():
+    with open("allowed_chats.txt") as f:
+        return [int(allowed_chat) for allowed_chat in f.readlines()]
 
 
 if __name__ == '__main__':

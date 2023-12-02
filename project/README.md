@@ -15,6 +15,8 @@ Then it will perform the training of the model.
 Afterwards, send "/search {query}" to the bot in order to find a message in the chat.
 The bot will send the links the relevant messages.
 
+If you want to restrict your bot to a few chats, add the allowed Chat IDs (numeric, one on each line) into [allowed_chats.txt](allowed_chats.txt)
+
 ## Examples
 ![example1](readme_screenshots/example1.png)
 
