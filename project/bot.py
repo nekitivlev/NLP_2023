@@ -26,11 +26,11 @@ def main():
                 return
 
             response = ""
-            for result in model.query(search_query):
+            for i, result in enumerate(model.query(search_query)):
                 message_text = result.message_text
                 message_text = message_text.replace('[', '\\[')
                 message_text = message_text.replace(']', '\\]')
-                response += f'[{message_text}]({result.message_link})\n'
+                response += f'{i + 1}) [{message_text}]({result.message_link})\n'
 
             await event.reply(response)
         bot.run_until_disconnected()

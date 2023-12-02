@@ -1,12 +1,13 @@
 import csv
 import logging
 import os
+import re
 import sys
 
 import gensim
 from nltk.stem import SnowballStemmer
 
-from login import create_user_client
+from login import create_user_client, create_openai_client
 
 
 def main():
@@ -34,7 +35,7 @@ class MessageSearchResult:
 
 
 class TelegramSearchModel:
-    def __init__(self, chat_name, language):
+    def __init__(self, chat_name, language, use_chat_gpt=True):
         chat_filename = get_chat_filename(chat_name)
         chat_id_filename = get_chat_id_filename(chat_name)
         model_filename = get_model_filename(chat_name)
@@ -49,11 +50,19 @@ class TelegramSearchModel:
         train_model(chat_messages, self.stemmer, model_filename)
         self.model = load_model(model_filename)
 
+        self.use_chat_gpt = use_chat_gpt
+        if use_chat_gpt:
+            self.openai_client = create_openai_client()
+
     def query(self, query):
         query_tokens = preprocess_message_text(query, self.stemmer)
         query_vector = self.model.infer_vector(query_tokens)
 
         results = []
+        if self.use_chat_gpt:
+            max_results = 20
+        else:
+            max_results = 5
         for message_id, similarity in self.model.dv.most_similar([query_vector], topn=200):
             chat_message = self.chat_message_by_id.get(message_id)
             if not chat_message:
@@ -64,8 +73,12 @@ class TelegramSearchModel:
 
             message_link = f"https://t.me/c/{str(self.chat_id)[4:]}/{message_id}"
             results.append(MessageSearchResult(message_id, chat_message, similarity, message_link))
-            if len(results) >= 5:
+            if len(results) >= max_results:
                 break
+
+        if self.use_chat_gpt:
+            results = filter_search_results_with_chat_gpt(self.openai_client, results, query)
+
         return results
 
 
@@ -176,6 +189,32 @@ def preprocess_message_text(message_text, stemmer):
 
 def load_model(model_filename):
     return gensim.models.doc2vec.Doc2Vec.load(model_filename)
+
+
+def filter_search_results_with_chat_gpt(openai_client, search_results, query):
+    chatgpt_query = 'Hello! I want you to help me find similar messages in a chat. Here is a message. Remember it:\n'
+    chatgpt_query += f'{escape_for_chat_gpt(query)}\n\n'
+    chatgpt_query += ("And here are some of the found messages, some of which may be irrelevant. "
+                      "Please choose several (around 5) of messages that are the most relevant to the original message. "
+                      "Print their ids in the same format (id=123). Print more relevant messages first. "
+                      "Don't write anything else.\n")
+    for i, search_result in enumerate(search_results):
+        chatgpt_query += f"id={i}\n{escape_for_chat_gpt(search_result.message_text)}\n\n"
+
+    response = openai_client.chat.completions.create(
+      model="gpt-3.5-turbo",
+      messages=[
+        {"role": "system", "content": "You follow instructions precisely."},
+        {"role": "user", "content": chatgpt_query}
+      ]
+    )
+    response_message = response.choices[0].message.content
+    message_indices = [int(match.group(1)) for match in re.finditer(r'id=(\d+)', response_message)]
+    return [search_results[message_index] for message_index in message_indices]
+
+
+def escape_for_chat_gpt(text):
+    return text.replace('\n', '')
 
 
 if __name__ == '__main__':
