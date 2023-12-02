@@ -63,7 +63,7 @@ class TelegramSearchModel:
             max_results = 20
         else:
             max_results = 5
-        for message_id, similarity in self.model.dv.most_similar([query_vector], topn=200):
+        for message_id, similarity in self.model.docvecs.most_similar([query_vector], topn=200):
             chat_message = self.chat_message_by_id.get(message_id)
             if not chat_message:
                 continue
