@@ -19,7 +19,7 @@ def create_user_client():
 
 def create_bot_client():
     auth = load_telegram_auth()
-    return TelegramClient('bot', auth.api_id, auth.api_hash).start(auth.bot_token)
+    return TelegramClient('bot', auth.api_id, auth.api_hash).start(bot_token=auth.bot_token)
 
 
 def create_openai_client():

@@ -14,8 +14,8 @@ def main():
         chat_name = input('Please input a Telegram chat name: ')
         language = input('Please input the language of the chat: ')
 
-    bot = create_bot_client()
     model = TelegramSearchModel(chat_name, language)
+    bot = create_bot_client()
     allowed_chats = get_allowed_chats()
 
     with bot:
