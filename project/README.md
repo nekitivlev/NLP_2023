@@ -1,6 +1,7 @@
 # TelegramSearchBot
 
 This bot aims to provide better search in a Telegram chat than the built-in search.
+You can type in full sentences as a search query, instead of searching by keyword as in with the built-in search.
 
 ## Method used
 
@@ -36,3 +37,8 @@ If you want to restrict your bot to a few chats, add the allowed Chat IDs (numer
 ![example1](readme_screenshots/example1.png)
 
 ![example2](readme_screenshots/example2.png)
+
+## Credits
+- Nikita Ivlev - 33%
+- Lev Leontev - 34%
+- Aleksandr Kariakin - 33%
